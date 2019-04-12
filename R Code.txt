@@ -1,0 +1,114 @@
+hwdata = read.table("C:\\Users\\d.krishnan\\Desktop\\data1.csv",  sep=" ")
+hwdata = ts(hwdata, frequency =12, start = c(1988,1))
+plot(hwdata)
+a=acf(hwdata)
+b=pacf(hwdata)
+hwdata_log=log(hwdata)
+plot(hwdata_log)
+diff1 = diff(hwdata_log)
+c=acf(diff1,50)
+d= pacf(diff1)
+diff2 =diff(diff1)
+acf(diff2)
+pacf(diff2)
+diff3 = (diff(diff2, 12))
+acf(diff3,50)
+pacf(diff3)
+mdl1 = arima(co2, order = c(2,2,1),seasonal = list(order=c(0,1,1),period=12))
+BIC(mdl1)
+mdl2 = arima(co2, order = c(1,2,1),seasonal = list(order=c(0,1,1),period=12))
+BIC(mdl2)
+mdl3 = arima(co2, order = c(2,2,1),seasonal = list(order=c(1,1,1),period=12))
+BIC(mdl3)
+mdl4 = arima(co2, order = c(1,2,2),seasonal = list(order=c(0,1,1),period=12))
+BIC(mdl4)
+mdl5 = arima(co2, order = c(2,2,1),seasonal = list(order=c(1,1,2),period=12))
+BIC(mdl4)
+
+mdl =  sarima(hwdata_log,2,2,1,1,1,2,12)
+resid = residuals(mdl$fit)
+hist(resid,probability = T)
+plot(hwdata_log,resid)
+
+##outliers
+
+lines(tsclean(hwdata),col='red')
+outliers = tso(hwdata_log)
+plot(outliers)
+outliers[["yadj"]]
+plot(outliers[["yadj"]])
+acf(outliers[["yadj"]],50, main='ACF of adjusted data')
+pacf(outliers[["yadj"]],,50, main='PACF of adjusted data')
+diff0 = diff(outliers[["yadj"]])
+acf(diff0,50, main='ACF of adjusted differenced data')
+pacf(diff0,50, main='PACF of adjusted differenced data')
+diff01 = diff(diff0)
+acf(diff01,50, main='ACF of adjusted second differenced data')
+pacf(diff01,50, main='PACF of adjusted second differenced data')
+diff012 = diff(diff01,12)
+acf(diff012,50, main='ACF of adjusted seasonal differenced data')
+pacf(diff012,50, main='PACF of adjusted seasonal differenced data')
+
+mdl_out =  sarima(outliers[["yadj"]],4,2,2,1,1,0,12)
+
+# intervention analysis
+
+hwdata[249]=155873
+trial = log(hwdata[1:212])
+trial = ts(trial, frequency = 12,start=c(1988,1))
+plot(trial,main = 'trial dataset', xlab = 'year', ylab='')
+acf(trial,100,main='ACF of trial data')
+pacf(trial,100, main='PACF of trial data')
+
+diffi1 = diff(trial)
+plot(diffi1)
+acf(diffi1,100, main='ACF of differenced data')
+pacf(diffi1,100,main='PACF of differenced data')
+
+diffi2 = diff(diffi1)
+plot(diffi2)
+acf(diffi2,100,main='ACF of second differenced data')
+pacf(diffi2,100,main='PACF of second differenced data')
+
+sdiffi = diff(diffi2,12)
+plot(sdiffi)
+acf(sdiffi,100,main='ACF of adjusted seasonal differenced data')
+pacf(sdiffi,100,main='PACF of adjusted seasonal differenced data')
+
+mdl_trial = sarima(trial,2,2,1,1,1,2,12) 
+residtrial = residuals((mdl_trial$fit))
+hist(residtrial,probability = T, main = 'histogram',xlab='residuals',ylab='')
+plot(trial,residtrial)
+oil.m1=arimax(hwdata_log,order=c(2,2,1),
+              seasonal=list(order=c(1,1,2),period=12),
+              xtransf=data.frame(I911=1*(seq(hwdata)==213),
+                                 I911=1*(seq(hwdata)==213)),
+              transfer=list(c(0,0),c(1,0)),
+              method='ML')
+
+plot(log(hwdata),ylab='Log(oil production)')
+points(fitted(oil.m1))
+Nine11p=1*(seq(log(hwdata))==213)
+plot(ts(Nine11p*(0.0265) + filter(Nine11p,filter=.583,method='recursive', side=1)*
+          (-0.2272),frequency=12,start=1988),ylab='oil production',
+     type='h'); abline(h=0)
+
+library(stats)
+
+tf =  1*(seq(1:(length(hwdata)+20))==213)*(0.0265) + filter(1*(seq(1:(length(hwdata)+20))==213),filter=0.583,method='recursive',side=1)*(-0.2272)
+forecast.arima = arima(log(hwdata),order=c(2,2,1), seasonal = c(1,1,2), xreg=tf[(1:(length(tf)-20))])
+forecast.arima
+pred=predict(forecast.arima,n.ahead = 20, newxreg=tf[370:length(tf)])
+plot(pred$pred, type ='l', col='red',lty=2)
+plot(cbind(hwdata, pred$pred), plot.type = "single", ylab = "", type = "n")
+lines(hwdata)
+lines(pred$pred, col='blue',lty=2)
+lines(pred$pred + 1.96 * pred$se, type = "l", col = "red", lty = 2)
+lines(pred$pred - 1.96 * pred$se, type = "l", col = "red", lty = 2)
+
+#plot(pred)
+#tc = forecast(forecast.arima,n.ahead = 20, xreg=tf[370:length(tf)])
+#plot(tc)
+
+tt = auto.arima(trial)
+plot(forecast(tt))
